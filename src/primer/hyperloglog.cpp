@@ -11,12 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "primer/hyperloglog.h"
+#include <bitset>
+#include <cmath>
+#include <string>
 
 namespace bustub {
 
 /** @brief Parameterized constructor. */
 template <typename KeyType>
-HyperLogLog<KeyType>::HyperLogLog(int16_t n_bits) : cardinality_(0) {}
+HyperLogLog<KeyType>::HyperLogLog(int16_t n_bits) : b(std::max<int16_t>(n_bits, 0)), m(1 << b), registers(m, 0) {}
 
 /**
  * @brief Function that computes binary.
@@ -27,7 +30,10 @@ HyperLogLog<KeyType>::HyperLogLog(int16_t n_bits) : cardinality_(0) {}
 template <typename KeyType>
 auto HyperLogLog<KeyType>::ComputeBinary(const hash_t &hash) const -> std::bitset<BITSET_CAPACITY> {
   /** @TODO(student) Implement this function! */
-  return {0};
+  std::bitset<BITSET_CAPACITY> b(hash);
+
+  std::string test = b.to_string();
+  return b;
 }
 
 /**
@@ -38,7 +44,11 @@ auto HyperLogLog<KeyType>::ComputeBinary(const hash_t &hash) const -> std::bitse
  */
 template <typename KeyType>
 auto HyperLogLog<KeyType>::PositionOfLeftmostOne(const std::bitset<BITSET_CAPACITY> &bset) const -> uint64_t {
-  /** @TODO(student) Implement this function! */
+  std::string t = bset.to_string();
+
+  for (size_t i = 0; i < t.length(); i++) {
+    if (t[i] == '1') return i + 1;
+  }
   return 0;
 }
 
@@ -50,6 +60,12 @@ auto HyperLogLog<KeyType>::PositionOfLeftmostOne(const std::bitset<BITSET_CAPACI
 template <typename KeyType>
 auto HyperLogLog<KeyType>::AddElem(KeyType val) -> void {
   /** @TODO(student) Implement this function! */
+  hash_t hashVal = CalculateHash(val);
+  std::bitset<BITSET_CAPACITY> binary = ComputeBinary(hashVal);
+  int registerId = (binary >> (BITSET_CAPACITY - b)).to_ullong();
+  uint64_t p = PositionOfLeftmostOne(binary << b);
+
+  registers[registerId] = std::max<long long>(registers[registerId], p);
 }
 
 /**
@@ -57,7 +73,14 @@ auto HyperLogLog<KeyType>::AddElem(KeyType val) -> void {
  */
 template <typename KeyType>
 auto HyperLogLog<KeyType>::ComputeCardinality() -> void {
-  /** @TODO(student) Implement this function! */
+  double sum = 0.0;
+
+  for (const int &r : registers) {
+    sum += pow(2, -r);
+  }
+
+  double T = CONSTANT * (double)m * (double)((double)m / sum);
+  cardinality_ = std::floor(T);
 }
 
 template class HyperLogLog<int64_t>;
