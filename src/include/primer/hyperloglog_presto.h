@@ -13,6 +13,7 @@
 #pragma once
 
 #include <bitset>
+#include <cstddef>
 #include <memory>
 #include <mutex>  // NOLINT
 #include <sstream>
@@ -63,6 +64,9 @@ class HyperLogLogPresto {
 
   auto ComputeCardinality() -> void;
 
+  /** @brief Updates the buckets */
+  auto UpdateBucket(uint16_t bucketId, int leadingZeros) -> void;
+
  private:
   /** @brief Calculate Hash.
    *
@@ -82,6 +86,22 @@ class HyperLogLogPresto {
     return 0;
   }
 
+  inline auto GetLeadingZeros(const uint64_t &bset) -> int {
+    std::bitset<64> bin(bset);
+
+    std::string s = bin.to_string().substr(b, 64 - b);
+
+    int longestZero = 0;
+    for (int i = s.length() - 1; i >= 0; i--) {
+      if (s[i] == '1')
+        break;
+      else
+        longestZero++;
+    }
+
+    return longestZero;
+  }
+
   /** @brief Structure holding dense buckets (or also known as registers). */
   std::vector<std::bitset<DENSE_BUCKET_SIZE>> dense_bucket_;
 
@@ -92,6 +112,8 @@ class HyperLogLogPresto {
   uint64_t cardinality_;
 
   // TODO(student) - can add more data structures as required
+
+  const int16_t b, m;
 };
 
 }  // namespace bustub
